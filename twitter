@@ -1,0 +1,29 @@
+import requests, datetime, os
+
+IFTTT_KEY = os.environ["IFTTT_KEY"]
+EVENT_NAME = "sol_price"
+
+def main():
+    # Fetch SOL price from CoinGecko
+    r = requests.get(
+        "https://api.coingecko.com/api/v3/simple/price",
+        params={"ids":"solana","vs_currencies":"usd"},
+        timeout=10
+    )
+    r.raise_for_status()
+    price = float(r.json()["solana"]["usd"])
+
+    # UTC timestamp (rounded to hour)
+    ts = datetime.datetime.utcnow().replace(minute=0, second=0, microsecond=0).isoformat()
+
+    # Build payload
+    payload = {"value1": ts, "value2": f"{price:.2f}"}
+
+    # Post to IFTTT
+    url = f"https://maker.ifttt.com/trigger/{EVENT_NAME}/json/with/key/{IFTTT_KEY}"
+    resp = requests.post(url, json=payload, timeout=10)
+    resp.raise_for_status()
+    print("Logged:", payload)
+
+if __name__ == "__main__":
+    main()
