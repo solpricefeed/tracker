@@ -4,6 +4,7 @@ import json
 import requests
 from datetime import datetime, timezone
 
+# Get environment variables (or hardcode the key for testing)
 IFTTT_KEY   = os.environ.get("IFTTT_KEY")          # or hardcode temporarily
 EVENT_NAME  = os.environ.get("IFTTT_EVENT", "sol_price_log")
 
@@ -28,10 +29,10 @@ def get_sol_price_usd() -> float:
 
 def post_to_ifttt(timestamp_iso: str, price: float, value3: str = ""):
     """Send a row to IFTTT Webhooks (Value1, Value2, Value3)."""
-    # NOTE: use the classic endpoint for the "Receive a web request" trigger
+    # Correct endpoint: no "/json" in the URL
     url = f"https://maker.ifttt.com/trigger/{EVENT_NAME}/with/key/{IFTTT_KEY}"
     payload = {"value1": timestamp_iso, "value2": f"{price:.2f}", "value3": value3}
-    # IFTTT accepts either form-encoded or JSON body here; JSON is fine:
+    
     resp = requests.post(url, json=payload, timeout=15)
     try:
         resp.raise_for_status()
