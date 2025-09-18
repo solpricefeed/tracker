@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-import os
 import json
 import requests
 from datetime import datetime, timezone
 
-# Get environment variables (or hardcode the key for testing)
-IFTTT_KEY   = os.environ.get("IFTTT_KEY")          # or hardcode temporarily
-EVENT_NAME  = os.environ.get("IFTTT_EVENT", "sol_price_log")
+# Hardcoded IFTTT URL with your key and event
+IFTTT_URL = "https://maker.ifttt.com/trigger/sol_price_log/with/key/cLcVxJK2s0I_FF-5UNwjNq"
 
 COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price"
 HEADERS = {
@@ -15,7 +13,7 @@ HEADERS = {
 }
 
 def now_utc_hour_iso() -> str:
-    """UTC timestamp rounded down to the hour in ISO format (no Z)."""
+    """UTC timestamp rounded down to the hour in ISO format."""
     ts = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     return ts.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -28,28 +26,23 @@ def get_sol_price_usd() -> float:
     return float(data["solana"]["usd"])
 
 def post_to_ifttt(timestamp_iso: str, price: float, value3: str = ""):
-    """Send a row to IFTTT Webhooks (Value1, Value2, Value3)."""
-    # Correct endpoint: no "/json" in the URL
-    url = f"https://maker.ifttt.com/trigger/{EVENT_NAME}/with/key/{IFTTT_KEY}"
-    payload = {"value1": timestamp_iso, "value2": f"{price:.2f}", "value3": value3}
-    
-    resp = requests.post(url, json=payload, timeout=15)
+    """Send a row to IFTTT Webhooks (Value1, Value2, Value3) via GET."""
+    params = {
+        "value1": timestamp_iso,
+        "value2": f"{price:.2f}",
+        "value3": value3
+    }
+    resp = requests.get(IFTTT_URL, params=params, timeout=15)
     try:
         resp.raise_for_status()
     except requests.HTTPError as e:
-        raise SystemExit(f"IFTTT POST failed: {e}\nResponse: {resp.text}") from e
-    print("Logged row:", json.dumps(payload))
+        raise SystemExit(f"IFTTT GET failed: {e}\nResponse: {resp.text}") from e
+    print("Logged row:", json.dumps(params))
 
 def main():
-    if not IFTTT_KEY:
-        raise SystemExit("Missing IFTTT_KEY env var")
-
     ts = now_utc_hour_iso()
     price = get_sol_price_usd()
-
-    # Leave Value3 blank; your Sheet column C calculates hourly change.
     post_to_ifttt(ts, price, value3="")
 
 if __name__ == "__main__":
     main()
-
