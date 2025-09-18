@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 import os
-import time
 import json
 import requests
 from datetime import datetime, timezone
 
-IFTTT_KEY   = os.environ.get("IFTTT_KEY")          # put your key in repo secrets
+IFTTT_KEY   = os.environ.get("IFTTT_KEY")          # or hardcode temporarily
 EVENT_NAME  = os.environ.get("IFTTT_EVENT", "sol_price_log")
 
 COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price"
@@ -29,13 +28,14 @@ def get_sol_price_usd() -> float:
 
 def post_to_ifttt(timestamp_iso: str, price: float, value3: str = ""):
     """Send a row to IFTTT Webhooks (Value1, Value2, Value3)."""
-    url = f"https://maker.ifttt.com/trigger/{EVENT_NAME}/json/with/key/{IFTTT_KEY}"
+    # NOTE: use the classic endpoint for the "Receive a web request" trigger
+    url = f"https://maker.ifttt.com/trigger/{EVENT_NAME}/with/key/{IFTTT_KEY}"
     payload = {"value1": timestamp_iso, "value2": f"{price:.2f}", "value3": value3}
+    # IFTTT accepts either form-encoded or JSON body here; JSON is fine:
     resp = requests.post(url, json=payload, timeout=15)
     try:
         resp.raise_for_status()
     except requests.HTTPError as e:
-        # helpful logging for IFTTT/CG errors
         raise SystemExit(f"IFTTT POST failed: {e}\nResponse: {resp.text}") from e
     print("Logged row:", json.dumps(payload))
 
@@ -46,8 +46,9 @@ def main():
     ts = now_utc_hour_iso()
     price = get_sol_price_usd()
 
-    # We leave Value3 blank because your Sheet column C calculates hourly change.
+    # Leave Value3 blank; your Sheet column C calculates hourly change.
     post_to_ifttt(ts, price, value3="")
 
 if __name__ == "__main__":
     main()
+
